@@ -1,0 +1,10 @@
+<!-- Launch file for Stereo Camera -->
+<launch>
+
+	<!-- Launch Camera Node -->
+	<node pkg="stereo_cam_node" type="stereo_cam" name="stereo_cam"/>
+
+	<!-- Launch tf node -->
+	<node pkg="tf" type="static_transform_publisher" name="cam_br" args="0.3 0.4 0.2 0 0 0 map stereo_cam 100"/>
+
+</launch>
