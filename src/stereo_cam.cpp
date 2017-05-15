@@ -14,13 +14,41 @@ image_transport::Publisher im_pub;
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg){
 	ROS_INFO("Recieved!");
-	im_pub.publish(msg);
+	
+	// Send this to the xillybus module
+	for (int i = 0; i < 447*370; i++){
+			
+	}
+
+	// Generate Image
+	sensor_msgs::Image img;
+
+	img.header.stamp = ros::Time::now();
+	img.header.frame_id = "stereo_cam";
+
+	img.height = 370;
+	img.width = 447;
+	
+	img.encoding = "mono8";
+	img.is_bigendian = 0;
+	
+	img.step = 447;
+        img.data = std::vector<uint8_t>(447*370);
+
+	// Fill image by reading from xillybus module	
+	for (int i = 0; i < 447*370; i++){
+		img.data.data()[i] = 255;	
+	}
+	
+	im_pub.publish(img);
 }
 
 int main(int argc, char **argv){
 	ros::init(argc, argv, "stereo_cam");
 	ros::NodeHandle n;
-
+	
+	// Open read/write files 
+	
 	image_transport::ImageTransport it(n);
 
 	// Subscribe to camera images, publish stereo images 
@@ -72,4 +100,6 @@ int main(int argc, char **argv){
 		
 		count++;
 	}
+
+	// Close read/write files
 }
