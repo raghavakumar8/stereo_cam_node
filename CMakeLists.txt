@@ -7,6 +7,7 @@ project(stereo_cam_node)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
+  image_transport
   std_msgs
 )
 

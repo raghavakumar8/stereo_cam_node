@@ -6,13 +6,27 @@
 #include <vector>
 
 #include "ros/ros.h"
+#include <image_transport/image_transport.h>
 #include "sensor_msgs/LaserScan.h"
+
+image_transport::Subscriber im_sub;
+image_transport::Publisher im_pub;
+
+void imageCallback(const sensor_msgs::ImageConstPtr& msg){
+	ROS_INFO("Recieved!");
+	im_pub.publish(msg);
+}
 
 int main(int argc, char **argv){
 	ros::init(argc, argv, "stereo_cam");
 	ros::NodeHandle n;
 
-	// Publishing on topic 'scan' at a 50Hz rate
+	image_transport::ImageTransport it(n);
+
+	// Subscribe to camera images, publish stereo images 
+	im_sub = it.subscribe("camera/image", 1, imageCallback);	
+	im_pub = it.advertise("stereo/image", 1);
+
 	ros::Publisher pub = n.advertise<sensor_msgs::LaserScan>("scan",100);
 	ros::Rate loop_rate(50);
 
@@ -49,10 +63,10 @@ int main(int argc, char **argv){
 		}
 
 		pub.publish(scan);
-
-		// Debug
-		ROS_INFO("Scanning! Count = %d", count);
-
+		
+		// Get callbacks	
+		ros::spinOnce();
+		
 		// Limit publishing rate
 		loop_rate.sleep();
 		
