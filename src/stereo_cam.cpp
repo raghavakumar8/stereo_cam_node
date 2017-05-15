@@ -39,8 +39,6 @@ void prep_send_buf(unsigned char *buf, int x, int y, unsigned char l, unsigned c
 void parse_recv_buf(unsigned char *buf, int *x, int *y, unsigned char *s);
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg){
-	ROS_INFO("Recieved!");
-	
 	// Send this to the xillybus module
 	int lin_addr, lin_addr_l, lin_addr_r;
 
@@ -49,17 +47,11 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg){
 			lin_addr = y*WIDTH + x;
 			lin_addr_l = y*WIDTH*2 + x;
 			lin_addr_r = lin_addr_l + WIDTH;
-			//ROS_INFO("x: %d,y: %d", x, y);
 			prep_send_buf(wr_buf + (lin_addr*8), x, y, (* msg).data.data()[lin_addr_l], (* msg).data.data()[lin_addr_r]);
 		}
 	}
-	//for (int i = 0; i < WIDTH*HEIGHT; i++){
-	//	wr_buf[i] = (* msg).data.data()[i];
-	//}
 
 	allwrite(fw, wr_buf, 8*WIDTH*HEIGHT);
-
-	ROS_INFO("Sent to FPGA");
 
 	// Generate Image
 	sensor_msgs::Image img;
@@ -84,14 +76,10 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg){
 
 	for (int i = 0; i < WIDTH*HEIGHT; i++){
 		parse_recv_buf(rd_buf + i*4, &x, &y, &s);
-		//ROS_INFO("x: %d, y: %d", x, y);
-		img.data.data()[i] = s;
-
-		//img.data.data()[i] = rd_buf[i];	
+		img.data.data()[y*WIDTH + x] = s;
 	}
 	
 	im_pub.publish(img);
-	//while(1);
 }
 
 int main(int argc, char **argv){
