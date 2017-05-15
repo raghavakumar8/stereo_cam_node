@@ -43,7 +43,9 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg){
 		wr_buf[i] = (* msg).data.data()[i];
 	}
 
-	//allwrite(fw, wr_buf, WIDTH*HEIGHT);
+	allwrite(fw, wr_buf, WIDTH*HEIGHT);
+
+	ROS_INFO("Sent to FPGA");
 
 	// Generate Image
 	sensor_msgs::Image img;
@@ -61,11 +63,10 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg){
         img.data = std::vector<uint8_t>(WIDTH*HEIGHT);
 
 	// Fill image by reading from xillybus module
-	//allread(fr, rd_buf, WIDTH*HEIGHT);
+	read(fr, rd_buf, WIDTH*HEIGHT);
 
 	for (int i = 0; i < WIDTH*HEIGHT; i++){
-		img.data.data()[i] = 255;
-		//img.data.data()[i] = rd_buf[i];	
+		img.data.data()[i] = rd_buf[i];	
 	}
 	
 	im_pub.publish(img);
@@ -96,51 +97,6 @@ int main(int argc, char **argv){
 	close(fw);
 	close(fr);
 
-	/*ros::Publisher pub = n.advertise<sensor_msgs::LaserScan>("scan",100);
-	ros::Rate loop_rate(50);
-
-	int count = 0;
-	while(ros::ok()){
-		// Create and populate message
-		sensor_msgs::LaserScan scan;
-
-		// Header
-		scan.header.stamp = ros::Time::now();
-		scan.header.frame_id = "stereo_cam";
-
-		// The following parameters were adapted from the Sick LMS111,
-		// converting its range from 270 to 360 degrees
-
-		// 360 degrees, 0.5 degree increment
-		scan.angle_min = -3.14159;
-		scan.angle_max = 3.14159;
-		scan.angle_increment = 0.00872665;
-
-		// 50Hz scan rate
-		scan.scan_time = 0.02;
-
-		// 0.1 <= range <= 30 (m)
-		scan.range_min = 0.1;
-		scan.range_max = 30.0;
-
-		// Actual data -- ranges only
-		scan.ranges = std::vector<float>(720,0);
-
-		for(int i = 0; i < 720; i++){
-			// Everything is approximately 5m away
-			scan.ranges.data()[i] = ((float)rand()/ RAND_MAX)*0.2 + 5.0;
-		}
-
-		pub.publish(scan);
-		
-		// Get callbacks	
-		ros::spinOnce();
-		
-		// Limit publishing rate
-		loop_rate.sleep();
-		
-		count++;
-	}*/
 }
 
 void allwrite(int fd, unsigned char *buf, int len) {
@@ -172,7 +128,7 @@ void allread(int fd, unsigned char *buf, int len) {
   int rc;
 
   while (recd < len) {
-    rc = write(fd, buf + recd, len - recd);
+    rc = read(fd, buf + recd, len - recd);
 
     if ((rc < 0) && (errno == EINTR))
       continue;
