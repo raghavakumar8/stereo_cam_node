@@ -28,22 +28,35 @@ int fr, fw;
 image_transport::Subscriber im_sub;
 image_transport::Publisher im_pub;
 
-unsigned char wr_buf[WIDTH*HEIGHT];
-unsigned char rd_buf[WIDTH*HEIGHT];
+unsigned char wr_buf[8*WIDTH*HEIGHT];
+unsigned char rd_buf[4*WIDTH*HEIGHT];
 
 // Function Prototypes
 void allwrite(int fd, unsigned char *buf, int len);
 void allread(int fd, unsigned char *buf, int len);
 
+void prep_send_buf(unsigned char *buf, int x, int y, unsigned char l, unsigned char r);
+void parse_recv_buf(unsigned char *buf, int *x, int *y, unsigned char *s);
+
 void imageCallback(const sensor_msgs::ImageConstPtr& msg){
 	ROS_INFO("Recieved!");
 	
 	// Send this to the xillybus module
-	for (int i = 0; i < WIDTH*HEIGHT; i++){
-		wr_buf[i] = (* msg).data.data()[i];
-	}
+	int lin_addr, lin_addr_r;
 
-	allwrite(fw, wr_buf, WIDTH*HEIGHT);
+	for (int y = 0; y < HEIGHT; y++){
+		for (int x = 0; x < WIDTH; x++){
+			lin_addr = y*WIDTH + x;
+			lin_addr_r = y*WIDTH + x + WIDTH;
+
+			prep_send_buf(wr_buf + (lin_addr*8), x, y, (* msg).data.data()[lin_addr], (* msg).data.data()[lin_addr_r]);
+		}
+	}
+	//for (int i = 0; i < WIDTH*HEIGHT; i++){
+	//	wr_buf[i] = (* msg).data.data()[i];
+	//}
+
+	allwrite(fw, wr_buf, 8*WIDTH*HEIGHT);
 
 	ROS_INFO("Sent to FPGA");
 
@@ -63,10 +76,16 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg){
         img.data = std::vector<uint8_t>(WIDTH*HEIGHT);
 
 	// Fill image by reading from xillybus module
-	read(fr, rd_buf, WIDTH*HEIGHT);
+	read(fr, rd_buf, 4*WIDTH*HEIGHT);
+
+	int x, y;
+	unsigned char s;
 
 	for (int i = 0; i < WIDTH*HEIGHT; i++){
-		img.data.data()[i] = rd_buf[i];	
+		parse_recv_buf(rd_buf + i*4, &x, &y, &s);
+		img.data.data()[i] = s;
+
+		//img.data.data()[i] = rd_buf[i];	
 	}
 	
 	im_pub.publish(img);
@@ -141,3 +160,22 @@ void allread(int fd, unsigned char *buf, int len) {
     recd += rc;
   }
 }
+
+void prep_send_buf(unsigned char *buf, int x, int y, unsigned char l, unsigned char r) {
+  buf[0] = x&0xFF;
+  buf[1] = (x>>8)&0xFF;
+  buf[2] = y&0xFF;
+  buf[3] = (y>>8)&0xFF;
+
+  buf[4] = r;
+  buf[5] = l;
+  buf[6] = 0;
+  buf[7] = 0x80;
+}
+
+void parse_recv_buf(unsigned char *buf, int *x, int *y, unsigned char *s) {
+  *s = buf[0];
+  *x = buf[1] + ((buf[2]&0x03)<<8);
+  *y = (buf[2]>>2) + ((buf[3]&0x0F)<<6);
+}
+
